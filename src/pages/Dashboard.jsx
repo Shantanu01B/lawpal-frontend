@@ -1,0 +1,313 @@
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import ComplaintForm from "../components/ComplaintForm";
+import jsPDF from "jspdf";
+import EditDocumentModal from "../components/EditDocumentModal";
+import toast from "react-hot-toast";
+
+const BACKEND_URL = "https://lawpal-backend.onrender.com";
+
+export default function Dashboard({ user }) {
+  const [generatedDoc, setGeneratedDoc] = useState("");
+  const [documents, setDocuments] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editingDoc, setEditingDoc] = useState(null);
+  const [activeTab, setActiveTab] = useState("generate");
+
+  useEffect(() => {
+    async function fetchDocs() {
+      try {
+        const res = await axios.get(
+          `${BACKEND_URL}/api/documents/my`,
+          { headers: { Authorization: "Bearer " + localStorage.getItem("token") } }
+        );
+        setDocuments(res.data);
+      } catch (err) {
+        toast.error("Failed to load documents");
+      }
+    }
+    fetchDocs();
+  }, []);
+
+  async function handleGenerate(formData) {
+    setLoading(true);
+    setGeneratedDoc("");
+    try {
+      const res = await axios.post(
+        `${BACKEND_URL}/api/ai/generate-document`,
+        formData
+      );
+      setGeneratedDoc(res.data.document);
+      setActiveTab("preview");
+      toast.success("Document generated successfully!");
+    } catch (err) {
+      toast.error("Failed to generate document");
+    }
+    setLoading(false);
+  }
+
+  async function handleSave() {
+    if (!generatedDoc) return;
+    setSaving(true);
+    try {
+      await axios.post(
+        `${BACKEND_URL}/api/documents/save`,
+        { content: generatedDoc },
+        { headers: { Authorization: "Bearer " + localStorage.getItem("token") } }
+      );
+      const res = await axios.get(
+        `${BACKEND_URL}/api/documents/my`,
+        { headers: { Authorization: "Bearer " + localStorage.getItem("token") } }
+      );
+      setDocuments(res.data);
+      setGeneratedDoc("");
+      setActiveTab("generate");
+      toast.success("Document saved to history!");
+    } catch (err) {
+      toast.error("Failed to save document");
+    }
+    setSaving(false);
+  }
+
+  async function handleUpdateDocument(id, newContent) {
+    try {
+      await axios.put(
+        `${BACKEND_URL}/api/documents/update/${id}`,
+        { content: newContent },
+        { headers: { Authorization: "Bearer " + localStorage.getItem("token") } }
+      );
+      const res = await axios.get(
+        `${BACKEND_URL}/api/documents/my`,
+        { headers: { Authorization: "Bearer " + localStorage.getItem("token") } }
+      );
+      setDocuments(res.data);
+      toast.success("Document updated successfully!");
+    } catch {
+      toast.error("Failed to update document");
+    }
+  }
+
+  async function handleDeleteDocument(id) {
+    try {
+      await axios.delete(
+        `${BACKEND_URL}/api/documents/delete/${id}`,
+        { headers: { Authorization: "Bearer " + localStorage.getItem("token") } }
+      );
+      setDocuments((docs) => docs.filter((doc) => doc._id !== id));
+      toast.success("Document deleted successfully!");
+    } catch {
+      toast.error("Failed to delete document");
+    }
+  }
+
+  function formatDocumentContent(text) {
+    const paragraphs = text.split('\n\n');
+    return paragraphs.map(para => {
+      const cleaned = para.replace(/\s+/g, ' ').trim();
+      if (cleaned.match(/^[A-Z][A-Z\s]+:$/)) {
+        return cleaned;
+      }
+      return `    ${cleaned}`;
+    }).join('\n\n');
+  }
+
+  function handleDownloadPDF(docText) {
+    const doc = new jsPDF();
+    doc.setProperties({
+      title: 'Legal Complaint Document',
+      subject: 'Formal Complaint Submission',
+      author: user?.name || 'LawPal User'
+    });
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(40, 53, 147);
+    doc.text('FORMAL LEGAL COMPLAINT', 105, 20, { align: 'center' });
+    doc.setDrawColor(40, 53, 147);
+    doc.setLineWidth(0.5);
+    doc.line(20, 25, 190, 25);
+    doc.setFontSize(12);
+    doc.setFont('times', 'normal');
+    doc.setTextColor(0, 0, 0);
+    const formattedText = formatDocumentContent(docText);
+    const lines = doc.splitTextToSize(formattedText, 170);
+    let yPosition = 35;
+    let isFirstLine = true;
+    lines.forEach(line => {
+      if (line.match(/^[A-Z][A-Z\s]+:$/)) {
+        if (!isFirstLine) yPosition += 10;
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(40, 53, 147);
+        doc.text(line, 20, yPosition);
+        doc.setFont('times', 'normal');
+        doc.setTextColor(0, 0, 0);
+        yPosition += 10;
+      } else {
+        doc.text(line, 20, yPosition);
+        yPosition += 7;
+      }
+      isFirstLine = false;
+      if (yPosition > 270) {
+        doc.addPage();
+        yPosition = 20;
+      }
+    });
+    doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+    doc.text('Generated by LawPal - Confidential Legal Document', 105, 285, { align: 'center' });
+    doc.save(`Complaint_${new Date().toISOString().slice(0,10)}.pdf`);
+  }
+
+  function formatGeneratedDocument(text) {
+    const sections = text.split('\n\n');
+    return sections.map((section, index) => {
+      const cleaned = section.replace(/\s+/g, ' ').trim();
+      if (cleaned.match(/^[A-Z][A-Z\s]+:$/)) {
+        return (
+          <h4 key={index} className="font-bold text-indigo-700 mt-6 mb-3 uppercase text-sm tracking-wider">
+            {cleaned.replace(':', '')}
+          </h4>
+        );
+      } else if (cleaned.match(/^\d+\./)) {
+        return (
+          <div key={index} className="ml-6 pl-4 border-l-2 border-indigo-200 my-3">
+            <p className="text-gray-800">{cleaned}</p>
+          </div>
+        );
+      } else {
+        return (
+          <p key={index} className="my-4 text-gray-800 text-justify leading-relaxed">
+            {cleaned}
+          </p>
+        );
+      }
+    });
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 py-8 px-4">
+      <div className="max-w-4xl mx-auto">
+        <div className="flex justify-between items-center mb-8">
+          <h2 className="text-2xl font-bold text-indigo-700">Dashboard</h2>
+          <div className="flex gap-2">
+            <button
+              className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                activeTab === "generate"
+                  ? "bg-indigo-600 text-white"
+                  : "bg-white text-indigo-600 border border-indigo-200"
+              }`}
+              onClick={() => setActiveTab("generate")}
+            >
+              Generate Document
+            </button>
+            <button
+              className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+                activeTab === "history"
+                  ? "bg-indigo-600 text-white"
+                  : "bg-white text-indigo-600 border border-indigo-200"
+              }`}
+              onClick={() => setActiveTab("history")}
+            >
+              History
+            </button>
+          </div>
+        </div>
+
+        {activeTab === "generate" && (
+          <div className="bg-white rounded-xl shadow-md p-6">
+            <h3 className="text-lg font-bold mb-4 text-gray-900">
+              Generate New Legal Document
+            </h3>
+            <ComplaintForm onSubmit={handleGenerate} loading={loading} />
+            {generatedDoc && (
+              <div className="mt-8">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="text-md font-bold text-indigo-700">
+                    Preview
+                  </h4>
+                  <div className="flex gap-2">
+                    <button
+                      className="px-3 py-1.5 rounded bg-green-600 text-white font-semibold"
+                      onClick={handleSave}
+                      disabled={saving}
+                    >
+                      {saving ? "Saving..." : "Save to History"}
+                    </button>
+                    <button
+                      className="px-3 py-1.5 rounded bg-blue-600 text-white font-semibold"
+                      onClick={() => handleDownloadPDF(generatedDoc)}
+                    >
+                      Download PDF
+                    </button>
+                  </div>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                  {formatGeneratedDocument(generatedDoc)}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === "history" && (
+          <div className="bg-white rounded-xl shadow-md p-6">
+            <h3 className="text-lg font-bold mb-4 text-gray-900">
+              Saved Documents
+            </h3>
+            {documents.length === 0 ? (
+              <p className="text-gray-600">No documents found.</p>
+            ) : (
+              <ul className="divide-y divide-gray-200">
+                {documents.map((doc) => (
+                  <li key={doc._id} className="py-4 flex flex-col gap-2">
+                    <div className="flex justify-between items-center">
+                      <span className="font-semibold text-indigo-700">
+                        {doc.title || `Document ${doc._id.slice(-6)}`}
+                      </span>
+                      <div className="flex gap-2">
+                        <button
+                          className="px-2 py-1 rounded bg-blue-500 text-white text-xs"
+                          onClick={() => setEditingDoc(doc)}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          className="px-2 py-1 rounded bg-red-500 text-white text-xs"
+                          onClick={() => handleDeleteDocument(doc._id)}
+                        >
+                          Delete
+                        </button>
+                        <button
+                          className="px-2 py-1 rounded bg-green-600 text-white text-xs"
+                          onClick={() => handleDownloadPDF(doc.content)}
+                        >
+                          PDF
+                        </button>
+                      </div>
+                    </div>
+                    <div className="bg-gray-50 rounded p-3 border border-gray-100 text-gray-800 text-sm whitespace-pre-line">
+                      {doc.content.length > 300
+                        ? doc.content.slice(0, 300) + "..."
+                        : doc.content}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+
+        {editingDoc && (
+          <EditDocumentModal
+            document={editingDoc}
+            onClose={() => setEditingDoc(null)}
+            onSave={async (newContent) => {
+              await handleUpdateDocument(editingDoc._id, newContent);
+              setEditingDoc(null);
+            }}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
