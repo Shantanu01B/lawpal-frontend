@@ -1,6 +1,8 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+
+// --- Features, Testimonials, Stats, Cards, Footer ---
 
 const features = [
   {
@@ -203,45 +205,28 @@ const Footer = () => (
   </footer>
 );
 
+// --- Main Home Component ---
+
 export default function Home() {
   const [currentFeature, setCurrentFeature] = useState(0);
   const [currentTestimonial, setCurrentTestimonial] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
 
-  // Zapier Chatbot Ref
-  const zapierBotRef = useRef(null);
+  // Chatbot open/close state
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   useEffect(() => {
     // Check if mobile on mount and on resize
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
     checkMobile();
     window.addEventListener('resize', checkMobile);
-    
+
     const featureInterval = setInterval(() => {
       setCurrentFeature((prev) => (prev + 1) % features.length);
     }, 4000);
     const testimonialInterval = setInterval(() => {
       setCurrentTestimonial((prev) => (prev + 1) % testimonials.length);
     }, 5000);
-
-    // Inject Zapier chatbot script ONCE
-    if (!document.getElementById("zapier-interfaces-script")) {
-      const script = document.createElement("script");
-      script.id = "zapier-interfaces-script";
-      script.async = true;
-      script.type = "module";
-      script.src =
-        "https://interfaces.zapier.com/assets/web-components/zapier-interfaces/zapier-interfaces.esm.js";
-      document.body.appendChild(script);
-    }
-
-    // Add the chatbot custom element if not already present
-    if (zapierBotRef.current && !zapierBotRef.current.hasChildNodes()) {
-      const chatbot = document.createElement("zapier-interfaces-chatbot-embed");
-      chatbot.setAttribute("is-popup", "true");
-      chatbot.setAttribute("chatbot-id", "cmbuys2jw00amh9lest1qmtwr");
-      zapierBotRef.current.appendChild(chatbot);
-    }
 
     return () => {
       clearInterval(featureInterval);
@@ -363,160 +348,156 @@ export default function Home() {
               Powerful Features
             </div>
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Everything You Need for Legal Matters
+              Everything you need to create legal documents
             </h2>
-            <p className="text-lg md:text-xl text-gray-600 max-w-3xl mx-auto">
-              Our comprehensive tools handle all your legal documentation needs with AI precision
+            <p className="text-gray-600 text-lg max-w-2xl mx-auto">
+              From contracts to FIRs, LawPal covers all your legal document needs with a simple, intuitive interface.
             </p>
           </motion.div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
-            {features.map((feature, index) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {features.map((feature, idx) => (
               <FeatureCard
-                key={index}
+                key={feature.title}
                 {...feature}
-                isActive={index === currentFeature}
-                onClick={() => setCurrentFeature(index)}
+                isActive={currentFeature === idx}
+                onClick={() => setCurrentFeature(idx)}
               />
             ))}
           </div>
-          
-          <motion.div 
-            className="relative h-80 sm:h-96 bg-gradient-to-br from-indigo-50 to-blue-50 rounded-3xl shadow-inner overflow-hidden"
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            transition={{ duration: 0.6 }}
-            viewport={{ once: true }}
-          >
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={currentFeature}
-                initial={{ opacity: 0, x: isMobile ? 0 : 100 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: isMobile ? 0 : -100 }}
-                transition={{ duration: 0.5 }}
-                className="absolute inset-0 flex items-center justify-center p-6 sm:p-8"
-              >
-                <div className="text-center max-w-2xl">
-                  <div
-                    className={`text-5xl sm:text-6xl mb-6 sm:mb-8 inline-block p-5 sm:p-6 rounded-xl bg-gradient-to-br ${features[currentFeature].color} text-white shadow-lg`}
-                  >
-                    {features[currentFeature].icon}
-                  </div>
-                  <h3 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4 sm:mb-6">
-                    {features[currentFeature].title}
-                  </h3>
-                  <p className="text-lg sm:text-xl text-gray-600 mb-6 sm:mb-8 leading-relaxed">
-                    {features[currentFeature].description}
-                  </p>
-                  <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                    <Link
-                      to="/dashboard"
-                      className="inline-block bg-gradient-to-r from-indigo-600 to-blue-600 text-white font-medium px-6 sm:px-8 py-2 sm:py-3 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 text-base sm:text-lg"
-                    >
-                      Try It Now
-                    </Link>
-                  </motion.div>
-                </div>
-              </motion.div>
-            </AnimatePresence>
-          </motion.div>
         </div>
       </section>
 
       {/* Testimonials Section */}
-      <section className="py-20 px-6 bg-gradient-to-br from-indigo-700 to-blue-700 text-white">
-        <div className="max-w-7xl mx-auto">
+      <section className="py-20 px-6 bg-gradient-to-br from-indigo-50 via-white to-blue-50">
+        <div className="max-w-4xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            viewport={{ once: true }}
+            viewport={{ once: true, margin: isMobile ? "0px" : "-100px" }}
             className="text-center mb-16"
           >
-            <div className="inline-block bg-white/20 text-white px-4 py-2 rounded-full text-sm font-medium mb-4">
+            <div className="inline-block bg-blue-100 text-blue-600 px-4 py-2 rounded-full text-sm font-medium mb-4">
               Testimonials
             </div>
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Trusted by Thousands
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              Trusted by thousands
             </h2>
-            <p className="text-lg md:text-xl text-indigo-100 max-w-3xl mx-auto">
-              Join our community of satisfied users who simplified their legal work
+            <p className="text-gray-600 text-lg max-w-2xl mx-auto">
+              See how LawPal is making a difference for people from all walks of life.
             </p>
           </motion.div>
-          
-          <div className="relative h-[28rem] max-w-4xl mx-auto bg-white/10 backdrop-blur-sm rounded-3xl overflow-hidden p-1">
-            {testimonials.map((testimonial, index) => (
-              <TestimonialCard
-                key={index}
-                {...testimonial}
-                isActive={index === currentTestimonial}
-              />
-            ))}
+          <div className="relative h-72 md:h-56">
+            <AnimatePresence>
+              {testimonials.map((testimonial, idx) =>
+                currentTestimonial === idx ? (
+                  <TestimonialCard key={testimonial.name} {...testimonial} isActive={true} />
+                ) : null
+              )}
+            </AnimatePresence>
           </div>
-          
-          <div className="flex justify-center gap-3 mt-10">
-            {testimonials.map((_, index) => (
+          <div className="flex justify-center mt-8 space-x-2">
+            {testimonials.map((_, idx) => (
               <button
-                key={index}
-                onClick={() => setCurrentTestimonial(index)}
-                className={`w-3 h-3 rounded-full transition-all duration-300 ${
-                  index === currentTestimonial ? "bg-white w-6" : "bg-white/30"
+                key={idx}
+                onClick={() => setCurrentTestimonial(idx)}
+                className={`w-3 h-3 rounded-full ${
+                  currentTestimonial === idx ? "bg-indigo-600" : "bg-gray-300"
                 }`}
-                aria-label={`View testimonial ${index + 1}`}
+                aria-label={`Go to testimonial ${idx + 1}`}
               />
             ))}
           </div>
         </div>
       </section>
 
-      {/* Final CTA */}
-      <section className="py-20 px-6 bg-gray-50">
-        <div className="max-w-4xl mx-auto text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            viewport={{ once: true }}
-            className="bg-white p-8 md:p-12 rounded-3xl shadow-lg relative overflow-hidden"
+      {/* --- Chatbot Floating Button and Popup --- */}
+      <div>
+        {/* Floating Chatbot Icon/Button */}
+        {!isChatOpen && (
+          <button
+            onClick={() => setIsChatOpen(true)}
+            style={{
+              position: "fixed",
+              bottom: 32,
+              right: 32,
+              zIndex: 9999,
+              width: 64,
+              height: 64,
+              borderRadius: "50%",
+              background: "linear-gradient(135deg, #6366f1 0%, #3b82f6 100%)",
+              boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
+              border: "none",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer"
+            }}
+            aria-label="Open Chatbot"
           >
-            {/* Decorative elements */}
-            <div className="absolute -top-20 -right-20 w-60 h-60 rounded-full bg-indigo-100/30 blur-3xl -z-10"></div>
-            <div className="absolute -bottom-20 -left-20 w-60 h-60 rounded-full bg-blue-100/30 blur-3xl -z-10"></div>
-            
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
-              Ready to Simplify Your Legal Work?
-            </h2>
-            <p className="text-lg md:text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-              Join thousands of users who trust LawPal for their legal documentation needs
-            </p>
-            <div className="flex flex-col sm:flex-row justify-center gap-4">
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Link
-                  to="/dashboard"
-                  className="inline-block bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 font-semibold text-base sm:text-lg"
-                >
-                  Start Now - It's Free
-                </Link>
-              </motion.div>
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Link
-                  to="/demo"
-                  className="inline-block bg-white text-indigo-600 border-2 border-indigo-100 px-6 sm:px-8 py-3 sm:py-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 font-semibold text-base sm:text-lg"
-                >
-                  Watch Demo
-                </Link>
-              </motion.div>
-            </div>
-          </motion.div>
-        </div>
-      </section>
+            <svg width="32" height="32" fill="white" viewBox="0 0 24 24">
+              <path d="M12 2C6.48 2 2 5.92 2 10.5c0 2.29 1.18 4.36 3.16 5.86-.13.47-.54 1.84-.62 2.17-.1.41.15.41.32.37.13-.03 1.52-.49 2.14-.73.87.24 1.8.37 2.8.37 5.52 0 10-3.92 10-8.5S17.52 2 12 2zm-4 7c.83 0 1.5.67 1.5 1.5S8.83 12 8 12s-1.5-.67-1.5-1.5S7.17 9 8 9zm8 0c.83 0 1.5.67 1.5 1.5S16.83 12 16 12s-1.5-.67-1.5-1.5S15.17 9 16 9zm-8 3.5c.83 0 1.5.67 1.5 1.5S8.83 15 8 15s-1.5-.67-1.5-1.5S7.17 12.5 8 12.5zm8 0c.83 0 1.5.67 1.5 1.5S16.83 15 16 15s-1.5-.67-1.5-1.5S15.17 12.5 16 12.5z"/>
+            </svg>
+          </button>
+        )}
 
-      {/* Footer */}
+        {/* Chatbot Iframe Popup */}
+        {isChatOpen && (
+          <div
+            style={{
+              position: "fixed",
+              bottom: 24,
+              right: 24,
+              zIndex: 9999,
+              width: 370,
+              height: 540,
+              borderRadius: 18,
+              boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
+              background: "#fff",
+              display: "flex",
+              flexDirection: "column"
+            }}
+          >
+            {/* Close Button */}
+            <button
+              onClick={() => setIsChatOpen(false)}
+              style={{
+                position: "absolute",
+                top: 8,
+                right: 8,
+                zIndex: 10000,
+                background: "rgba(0,0,0,0.1)",
+                border: "none",
+                borderRadius: "50%",
+                width: 32,
+                height: 32,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer"
+              }}
+              aria-label="Close Chatbot"
+            >
+              <svg width="20" height="20" fill="#333" viewBox="0 0 24 24">
+                <path d="M18.3 5.71a1 1 0 00-1.41 0L12 10.59 7.11 5.7A1 1 0 105.7 7.11L10.59 12l-4.89 4.89a1 1 0 101.41 1.41L12 13.41l4.89 4.89a1 1 0 001.41-1.41L13.41 12l4.89-4.89a1 1 0 000-1.4z"/>
+              </svg>
+            </button>
+            <iframe
+              title="LawPal Chatbot"
+              src="https://cdn.botpress.cloud/webchat/v3.0/shareable.html?configUrl=https://files.bpcontent.cloud/2025/06/29/13/20250629130830-BFDG4HEH.json"
+              style={{
+                width: "100%",
+                height: "100%",
+                border: "none",
+                borderRadius: 18
+              }}
+              allow="clipboard-write"
+            />
+          </div>
+        )}
+      </div>
+
       <Footer />
-
-      {/* Zapier Chatbot Embed */}
-      <div ref={zapierBotRef}></div>
     </div>
   );
 }
